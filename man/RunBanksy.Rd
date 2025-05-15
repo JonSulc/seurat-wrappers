@@ -8,7 +8,7 @@ RunBanksy(
   object,
   lambda,
   assay = "RNA",
-  slot = "data",
+  layer = "data",
   use_agf = FALSE,
   dimx = NULL,
   dimy = NULL,
@@ -25,7 +25,9 @@ RunBanksy(
   spatial_mode = "kNN_median",
   assay_name = "BANKSY",
   M = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  log = TRUE,
+  slot = NULL
 )
 }
 \arguments{
@@ -35,7 +37,7 @@ RunBanksy(
 
 \item{assay}{(character) Assay in Seurat object to use}
 
-\item{slot}{(character) Slot in Seurat assay to use}
+\item{layer}{(character) Layer in Seurat assay to use}
 
 \item{use_agf}{(boolean) Whether to use the AGF}
 
@@ -79,6 +81,8 @@ a vector of feature names}
 \item{M}{(numeric) Advanced usage. Highest azimuthal harmonic}
 
 \item{verbose}{(boolean) Print messages}
+
+\item{slot}{(character) Deprecated, use the 'layer' parameter instead}
 }
 \value{
 A Seurat object with new assay holding a Banksy matrix

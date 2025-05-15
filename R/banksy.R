@@ -8,7 +8,7 @@ NULL
 #' @param object A Seurat object
 #' @param lambda (numeric) Spatial weight parameter
 #' @param assay (character) Assay in Seurat object to use
-#' @param slot (character) Slot in Seurat assay to use
+#' @param layer (character) Layer in Seurat assay to use
 #' @param use_agf (boolean) Whether to use the AGF
 #' @param dimx (character) Column name of spatial x dimension (must be in metadata)
 #' @param dimy (character) Column name of spatial y dimension (must be in metadata)
@@ -35,6 +35,7 @@ NULL
 #' @param assay_name (character) Name for Banksy assay in Seurat object
 #' @param M (numeric) Advanced usage. Highest azimuthal harmonic
 #' @param verbose (boolean) Print messages
+#' @param slot (character) Deprecated, use the 'layer' parameter instead
 #'
 #' @return A Seurat object with new assay holding a Banksy matrix
 #'
@@ -46,23 +47,29 @@ NULL
 #' Algorithm that Unifies Cell Type Clustering and Tissue Domain Segmentation
 #'
 #' @export
-RunBanksy <- function(object, lambda, assay='RNA', slot='data', use_agf=FALSE,
+RunBanksy <- function(object, lambda, assay='RNA', layer='data', use_agf=FALSE,
                       dimx=NULL, dimy=NULL, dimz=NULL, ndim=2,
                       features='variable',
                       group=NULL, split.scale=TRUE,
                       k_geom=15, n=2, sigma=1.5,
                       alpha=0.05, k_spatial=10, spatial_mode='kNN_median',
-                      assay_name='BANKSY', M=NULL, verbose=TRUE) {
+                      assay_name='BANKSY', M=NULL, verbose=TRUE,
+                      log = TRUE, slot = NULL) {
     # Check packages
     SeuratWrappers:::CheckPackage(package = 'data.table', repository = 'CRAN')
     SeuratWrappers:::CheckPackage(package = 'Matrix', repository = 'CRAN')
     SeuratWrappers:::CheckPackage(package = 'Banksy', repository = 'github')
 
+    if (!is.null(slot)) {
+      .Deprecated("'layer'", old = "'slot' parameter")
+      if (layer == "data") layer <- slot
+    }
+
     # Check lambda param
     if (lambda < 0 || lambda > 1) stop('Lambda must be between 0 and 1')
 
     # Get data
-    data_own <- get_data(object, assay, slot, features, verbose)
+    data_own <- get_data(object, assay, layer, features, verbose)
 
     # Get locs
     locs <- get_locs(object, dimx, dimy, dimz, ndim, data_own, group, verbose)
@@ -111,7 +118,7 @@ RunBanksy <- function(object, lambda, assay='RNA', slot='data', use_agf=FALSE,
     data_scaled <- do.call(rbind, data_scaled)
 
     # Create an assay object
-    if (grepl(pattern = 'counts', x = slot)) {
+    if (grepl(pattern = 'counts', x = layer)) {
         banksy_assay <- Seurat::CreateAssayObject(counts = data_banksy)
     } else {
         banksy_assay <- Seurat::CreateAssayObject(data = data_banksy)
@@ -121,20 +128,22 @@ RunBanksy <- function(object, lambda, assay='RNA', slot='data', use_agf=FALSE,
     if (verbose) message('Setting default assay to ', assay_name)
     object[[assay_name]] <- banksy_assay
     DefaultAssay(object) <- assay_name
-    object <- SetAssayData(object, slot = 'scale.data', new.data = data_scaled,
+    object <- SetAssayData(object, layer = 'scale.data', new.data = data_scaled,
                            assay = assay_name)
 
-    # Log commands
-    object <- Seurat::LogSeuratCommand(object = object)
+    if (log) {
+      # Log commands
+      object <- Seurat::LogSeuratCommand(object = object)
+    }
 
   return(object)
 }
 
 # Get own expression matrix from Seurat object
-get_data <- function(object, assay, slot, features, verbose) {
+get_data <- function(object, assay, layer, features, verbose) {
     # Fetch data from Seurat
-    if (verbose) message('Fetching data from slot ', slot,' from assay ', assay)
-    data_own <- Seurat::GetAssayData(object = object, assay = assay, slot = slot)
+    if (verbose) message('Fetching data from layer ', layer,' from assay ', assay)
+    data_own <- Seurat::GetAssayData(object = object, assay = assay, layer = layer)
     # Feature subset
     if (features[1] != 'all') {
         if (verbose) message('Subsetting by features')
